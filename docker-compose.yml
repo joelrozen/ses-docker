@@ -1,0 +1,42 @@
+version: '3'
+
+networks:
+  mynet:
+
+services:
+  traefik:
+    image: traefik:latest
+    command: --api --docker --acme.email="${ACME_EMAIL}"
+    restart: always
+    networks:
+      - mynet
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik.toml:/traefik.toml              
+      - ./acme.json:/acme.json                    
+    ports:
+      - "80:80"
+      - "443:443"
+    labels:
+      - "traefik.enable=false"
+
+  ses:
+    build: .
+    networks:
+      - mynet
+    ports:
+      - "3000"
+    environment: 
+      AWS_KEY: 'AKIABCDEFGHIJKLMNOPQ'
+      AWS_SECRET: 'ABCDEF/12345ZYXWVUTSRQPONMLKJIHGFEDCBA'
+      AWS_REGION: 'us-east-1'
+      DEFAULT_FROM: 'Default From Name <default@yourdomain.com>' # must be verified sender/domain in SES
+      DEFAULT_TO: 'you@email.com'
+      DEFAULT_SUBJECT: 'This is the defaul subject'
+      DEFAULT_MESSAGE: 'This is the default email content.<br /><br />It supports HTML.'
+    labels:
+      - "traefik.docker.network=backend"
+      - "traefik.enable=true"
+      - "traefik.frontend.rule=Host:${SES_DOMAIN}"
+      - "traefik.port=3000"
+
